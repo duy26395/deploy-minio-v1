@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  minio_nginx:
+    image: nginx:latest
+    container_name: minio_nginx
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 11111:80
+  
+  minio-fpm:
+    build:
+      context: .
+      dockerfile: docker/php-fpm/Dockerfile
+    container_name: minio-fpm
+    volumes:
+      - ./laravel:/var/www/html
+    working_dir: /var/www/html
+    stdin_open: true
+    tty: true
+  
+  minio_s3_test:
+    image: minio/minio:RELEASE.2024-01-13T07-53-03Z
+    container_name: minio_s3_test
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=minio123
+    entrypoint: sh
+    command: -c " mkdir -p /data/.minio.sys/buckets; cp -r /policies/* /data/.minio.sys/; cp -r /export/* /data/; /usr/bin/minio server /data --console-address ":9001"; "
+    volumes:
+      - minio:/data
+      - ./docker/minio/export:/export
+      - ./docker/minio/policies:/policies
+volumes:
+  minio:
